@@ -70,6 +70,7 @@ if (fptr1 == NULL) {
 }
 
 char c; //hey
+char v;
 
 for (int m = 0; c != EOF; m++) {
 
