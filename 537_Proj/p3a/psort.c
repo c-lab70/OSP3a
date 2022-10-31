@@ -102,7 +102,7 @@ for (int i = 0; i < num_lines; i++) {
   line1.bytes = (fptr1 + i*100 + 4); //correct or not????
 }
 
-/////////////////////////////////////OUTPUT
+///////////////////////////////////// Write-Out
 
 FILE* fptr2 = fopen(argv[2], "w");
 
@@ -117,7 +117,7 @@ fclose(fptr1);
 return 0;
 }
 
-/*
+/* Notes:
 do not need to consider reallocating work if one thread finishes first
 
 thread the read in and the sorting using lines/cpus 
@@ -130,5 +130,3 @@ https://stackoverflow.com/questions/41346061/parallel-sorting-in-quick-sort-usin
 
 https://www.geeksforgeeks.org/quick-sort-using-multi-threading/#:~:text=QuickSort%20is%20a%20popular%20sorting,array%20is%20partitioned%20around%20it.
 */
-
-//loop to write out characters.
