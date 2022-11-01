@@ -3,6 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 
 //stores the key and bytes (using mmap pointer) for each line.
 //structs are all in an array that will be divided by thread and sorted
@@ -68,24 +72,26 @@ void quickSort(int array[], int low, int high) {
 
 int main(int argc, char *argv[]) {
 
-FILE* fptr1 = fopen(argv[1], "r");
+int fcode = open(argv[1], O_RDONLY);
 
-fseek(fptr1, 0, SEEK_END); // seek to end of file
-int fsize = ftell(fptr1); // get current file pointer and consequentially size of the file in bytes
-fseek(fptr1, 0, SEEK_SET); //https://stackoverflow.com/questions/238603/how-can-i-get-a-files-size-in-c
+struct stat st;
+stat(argv[1], &st);
+int fsize = st.st_size; //https://stackoverflow.com/questions/238603/how-can-i-get-a-files-size-in-c
 
 int num_cpu = get_nprocs(); //gets number of cpus availible
 
 //map the file bytes to memory. That way, no need to copy to a char array and 
 //write back. Just move to the output using pointer arithmetic.
 //https://man7.org/linux/man-pages/man2/mmap.2.html
-mmap(NULL, fsize, PROT_READ, MAP_SHARED, fptr1, 0); //https://linuxhint.com/using_mmap_function_linux/#:~:text=The%20mmap()%20function%20is,an%20array%20in%20the%20program.
+char* file_start = mmap(NULL, fsize, PROT_READ, MAP_SHARED, fcode, 0); //https://linuxhint.com/using_mmap_function_linux/#:~:text=The%20mmap()%20function%20is,an%20array%20in%20the%20program.
 
-if (fptr1 == NULL) { //no file, fail
+if (fcode < 0) { //no file, fail
+  printf("No File Found");
   return 1;
 }
 
 if (fsize == 0) { //empty file, fail
+  printf("File Size 0");
   return 1;
 }
 
@@ -93,13 +99,13 @@ int num_lines = fsize / 100; //number of lines
 
 int num_lines_thread = num_lines / num_cpu; //number of lines assigned to each thread
 
-struct fline line_arr[] = malloc(num_lines * sizeof(struct fline));
+struct fline* line_arr = malloc(num_lines * sizeof(struct fline));
 
 for (int i = 0; i < num_lines; i++) {
   struct fline line1;
   int j = 4;
-  line1.key = *(int*)(fptr1 + i*100 + j-4);
-  line1.bytes = (fptr1 + i*100 + 4); //correct or not????
+  line1.key = *(int*)(file_start + i*100);
+  line1.bytes = (file_start + i*100 + 4); //correct or not????
 }
 
 ///////////////////////////////////// Write-Out
@@ -113,7 +119,7 @@ for(int i = 0; i < num_lines; i++) {
   }
 }
 
-fclose(fptr1);
+close(fcode);
 return 0;
 }
 
