@@ -100,13 +100,13 @@ int num_cpu = get_nprocs(); //gets number of cpus availible
 char* file_start = mmap(NULL, fsize, PROT_READ, MAP_SHARED, fcode, 0); //https://linuxhint.com/using_mmap_function_linux/#:~:text=The%20mmap()%20function%20is,an%20array%20in%20the%20program.
 
 if (fcode < 0) { //no file, fail
-  printf("No File Found");
-  return 1;
+  fprintf(stderr, "An error has occured\n");
+  exit(0);
 }
 
 if (fsize == 0) { //empty file, fail
-  printf("File Size 0");
-  return 1;
+  fprintf(stderr, "An error has occured\n");
+  exit(0);
 }
 
 int num_lines = (fsize + 1) / 100; //number of lines
@@ -137,6 +137,7 @@ for (int i = 0; i < num_lines; i++) {
     int32_t myInt1 = key[3] + (key[2] << 8) + (key[1] << 16) + (key[0] << 24);
 
     line_arr[i].key = myInt1;
+    //printf("Key %d : %d\n", i, line_arr[i].key);
 
   line_arr[i].bytes = (file_start + i*100 + 4); //correct or not????
 }
@@ -160,7 +161,6 @@ if(num_lines / num_cpu > 1){
       myargs_t args = {line_arr, i * num_lines_thread, (i + 1) * num_lines_thread - 1};
       pthread_create(&thread_arr[i], NULL, quickSortThread, &args);
     }
-  
   }
 
   for(int i = 0; i < num_cpu; i++){
@@ -184,24 +184,27 @@ if(fptr2 == -1){
 
 
 //char nl = '\0';
-for(int i = 0; i < num_lines; i++) {
+// for(int i = 0; i < num_lines; i++) {
 
-    char key[4]; 
-    int n = line_arr[i].key;
-    key[0] = (n >> 24) & 0xFF;
-    key[1] = (n >> 16) & 0xFF;
-    key[2] = (n >> 8) & 0xFF;
-    key[3] = n & 0xFF;
+//     char key[4]; 
+//     int n = line_arr[i].key;
+//     key[0] = (n >> 24) & 0xFF;
+//     key[1] = (n >> 16) & 0xFF;
+//     key[2] = (n >> 8) & 0xFF;
+//     key[3] = n & 0xFF;
 
     
+//     //printf("Key %d : %d\n", i, line_arr[i].key);
+//     ssize_t size = write(fptr2, key, 4);
+//     ssize_t size_1 = write(fptr2, line_arr[i].bytes, 96);
+//     if (size <= 0 || size_1  <= 0) {
+//       printf("FAIL");
+//       exit(0);
+//     }
+// }
 
-    ssize_t size = write(fptr2, key, 4);
-    ssize_t size_1 = write(fptr2, line_arr[i].bytes, 96);
-    if (size <= 0 || size_1  <= 0) {
-      printf("FAIL");
-      exit(0);
-    }
-}
+
+fsync(fptr2);
 
 close(fcode);
 close(fptr2);
