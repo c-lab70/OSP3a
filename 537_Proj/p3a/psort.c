@@ -7,14 +7,21 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <pthread.h>
 
 
 //stores the key and bytes (using mmap pointer) for each line.
 //structs are all in an array that will be divided by thread and sorted
 struct fline {
-  uint32_t key;
+  int32_t key;
   char *bytes;
 };
+
+typedef struct{
+  struct fline *a;
+  int b;
+  int c;
+} myargs_t;
 
 //Quicksort implementation for project adapted from https://www.programiz.com/dsa/quick-sort
 
@@ -28,7 +35,7 @@ void swap(struct fline *a, struct fline *b) {
 // function to find the partition position
 int partition(struct fline *array, int low, int high) {
   // select the rightmost element as pivot
-  uint32_t pivot = array[high].key;
+  int32_t pivot = array[high].key;
 
   // pointer for greater element
   int i = (low - 1);
@@ -70,6 +77,13 @@ void quickSort(struct fline *array, int low, int high) {
   }
 }
 
+void *quickSortThread(void *args){
+  myargs_t *qsArgs = (myargs_t *) args;
+  quickSort(qsArgs->a, qsArgs->b, qsArgs->c);
+  void* a = NULL;
+  return a;
+}
+
 int main(int argc, char *argv[]) {
 
 int fcode = open(argv[1], O_RDONLY);
@@ -98,9 +112,18 @@ if (fsize == 0) { //empty file, fail
 int num_lines = (fsize + 1) / 100; //number of lines
 
 int num_lines_thread = num_lines / num_cpu; //number of lines assigned to each thread
+if(num_lines < num_cpu){
+  num_lines_thread = num_lines;
+  num_cpu = 1;
+}
+else{
+  num_lines_thread = num_lines / num_cpu; //number of lines assigned to each thread
+}
+
+int remainder = num_lines % num_cpu;
+//int lines_last_thread = num_lines_thread + remainder;
 
 struct fline* line_arr = malloc(num_lines * sizeof(struct fline));
-
 
 for (int i = 0; i < num_lines; i++) {
 
@@ -111,28 +134,56 @@ for (int i = 0; i < num_lines; i++) {
     }
     key[4] = '\0';
     
-    uint32_t myInt1 = key[3] + (key[2] << 8) + (key[1] << 16) + (key[0] << 24);
+    int32_t myInt1 = key[3] + (key[2] << 8) + (key[1] << 16) + (key[0] << 24);
 
     line_arr[i].key = myInt1;
 
   line_arr[i].bytes = (file_start + i*100 + 4); //correct or not????
+}
+//using one thread
+// pthread_t thread;
+// myargs_t args = {line_arr, 0, num_lines - 1};
+// pthread_create(&thread, NULL, quickSortThread, &args);
+// void** a;
+// pthread_join(thread, a);
 
+if(num_lines / num_cpu > 1){
+  pthread_t thread_arr[num_cpu];
+
+  for(int i = 0; i < num_cpu; i++){
   
+    if(i == num_cpu -1){
+      myargs_t args = {line_arr, i * num_lines_thread, (i + 1) * num_lines_thread + (remainder - 1)};
+      pthread_create(&thread_arr[i], NULL, quickSortThread, &args);
+    }
+    else{
+      myargs_t args = {line_arr, i * num_lines_thread, (i + 1) * num_lines_thread - 1};
+      pthread_create(&thread_arr[i], NULL, quickSortThread, &args);
+    }
+  
+  }
+
+  for(int i = 0; i < num_cpu; i++){
+    void** a = NULL;
+    pthread_join(thread_arr[i], a);
+  }
 
 }
+
 quickSort(line_arr, 0, num_lines - 1);
 
 
 ///////////////////////////////////// Write-Out
 
-int fptr2 = open(argv[2], O_WRONLY);
+int fptr2 = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
 
 if(fptr2 == -1){
     perror("open");
     exit(1);
 }
 
-char nl = '\0';
+
+//char nl = '\0';
 for(int i = 0; i < num_lines; i++) {
 
     char key[4]; 
@@ -142,9 +193,14 @@ for(int i = 0; i < num_lines; i++) {
     key[2] = (n >> 8) & 0xFF;
     key[3] = n & 0xFF;
 
-    write(fptr2, key, 4);
-    write(fptr2, line_arr[i].bytes, 96);
     
+
+    ssize_t size = write(fptr2, key, 4);
+    ssize_t size_1 = write(fptr2, line_arr[i].bytes, 96);
+    if (size <= 0 || size_1  <= 0) {
+      printf("FAIL");
+      exit(0);
+    }
 }
 
 close(fcode);
@@ -160,4 +216,3 @@ define method that compares keys of structs in order to sort them
 https://stackoverflow.com/questions/41346061/parallel-sorting-in-quick-sort-using-multi-threads-in-c
 https://www.geeksforgeeks.org/quick-sort-using-multi-threading/#:~:text=QuickSort%20is%20a%20popular%20sorting,array%20is%20partitioned%20around%20it.
 */
-
