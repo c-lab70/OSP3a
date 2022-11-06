@@ -139,7 +139,7 @@ for (int i = 0; i < num_lines; i++) {
     line_arr[i].key = myInt1;
     //printf("Key %d : %d\n", i, line_arr[i].key);
 
-  line_arr[i].bytes = (file_start + i*100 + 4); //correct or not????
+  line_arr[i].bytes = (file_start + i*100); //correct or not????
 }
 //using one thread
 // pthread_t thread;
@@ -183,26 +183,25 @@ if(fptr2 == -1){
 }
 
 
-//char nl = '\0';
-// for(int i = 0; i < num_lines; i++) {
+// char nl = '\0';
+for(int i = 0; i < num_lines; i++) {
 
-//     char key[4]; 
-//     int n = line_arr[i].key;
-//     key[0] = (n >> 24) & 0xFF;
-//     key[1] = (n >> 16) & 0xFF;
-//     key[2] = (n >> 8) & 0xFF;
-//     key[3] = n & 0xFF;
+    // char key[4]; 
+    // int n = line_arr[i].key;
+    // key[0] = (n >> 24) & 0xFF;
+    // key[1] = (n >> 16) & 0xFF;
+    // key[2] = (n >> 8) & 0xFF;
+    // key[3] = n & 0xFF;
 
     
-//     //printf("Key %d : %d\n", i, line_arr[i].key);
-//     ssize_t size = write(fptr2, key, 4);
-//     ssize_t size_1 = write(fptr2, line_arr[i].bytes, 96);
-//     if (size <= 0 || size_1  <= 0) {
-//       printf("FAIL");
-//       exit(0);
-//     }
-// }
-
+    //printf("Key %d : %d\n", i, line_arr[i].key);
+    // ssize_t size = write(fptr2, key, 4);
+    ssize_t size_1 = write(fptr2, line_arr[i].bytes, 100);
+    if (size_1 <= 0) {
+      printf("FAIL");
+      exit(0);
+    }
+}
 
 fsync(fptr2);
 
