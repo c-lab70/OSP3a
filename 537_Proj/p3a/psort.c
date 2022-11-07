@@ -14,7 +14,7 @@
 //structs are all in an array that will be divided by thread and sorted
 struct fline {
   int32_t key;
-  char *bytes;
+  char bytes[96];
 };
 
 typedef struct{
@@ -25,61 +25,126 @@ typedef struct{
 
 //Quicksort implementation for project adapted from https://www.programiz.com/dsa/quick-sort
 
-// function to swap elements
-void swap(struct fline *a, struct fline *b) {
-  struct fline t = *a;
-  *a = *b;
-  *b = t;
-}
+// // function to swap elements
+// void swap(struct fline *a, struct fline *b) {
+//   struct fline t = *a;
+//   *a = *b;
+//   *b = t;
+// }
 
-// function to find the partition position
-int partition(struct fline *array, int low, int high) {
-  // select the rightmost element as pivot
-  int32_t pivot = array[high].key;
+// // function to find the partition position
+// int partition(struct fline *array, int low, int high) {
+//   // select the rightmost element as pivot
+//   int32_t pivot = array[high].key;
 
-  // pointer for greater element
-  int i = (low - 1);
+//   // pointer for greater element
+//   int i = (low - 1);
 
-  // traverse each element of the array
-  // compare them with the pivot
-  for (int j = low; j < high; j++) {
-    if (array[j].key <= pivot) {
+//   // traverse each element of the array
+//   // compare them with the pivot
+//   for (int j = low; j < high; j++) {
+//     if (array[j].key <= pivot) {
 
-      // if element smaller than pivot is found
-      // swap it with the greater element pointed by i
+//       // if element smaller than pivot is found
+//       // swap it with the greater element pointed by i
+//       i++;
+
+//       // swap element at i with element at j
+//         swap(&array[i], &array[j]);
+//     }
+//   }
+
+//   // swap the pivot element with the greater element at i
+//     swap(&array[i + 1], &array[high]);
+
+//   // return the partition point
+//   return (i + 1);
+// }
+
+// void quickSort(struct fline *array, int low, int high) {
+//   if (low < high) {
+
+//     // find the pivot element such that
+//     // elements smaller than pivot are on left of pivot
+//     // elements greater than pivot are on right of pivot
+//     int pi = partition(array, low, high);
+
+//     // recursive call on the left of pivot
+//     quickSort(array, low, pi - 1);
+
+//     // recursive call on the right of pivot
+//     quickSort(array, pi + 1, high);
+//   }
+// }
+
+// Merge two subarrays L and M into arr
+void merge(struct fline *array, int p, int q, int r) {
+
+  // Create L ← A[p..q] and M ← A[q+1..r]
+  int n1 = q - p + 1;
+  int n2 = r - q;
+
+  struct fline *low = malloc(n1 * sizeof(struct fline));
+  struct fline *high = malloc(n2 * sizeof(struct fline));
+
+  for (int i = 0; i < n1; i++)
+    low[i] = array[p + i];
+  for (int j = 0; j < n2; j++)
+    high[j] = array[q + 1 + j];
+
+  // Maintain current index of sub-arrays and main array
+  int i, j, k;
+  i = 0;
+  j = 0;
+  k = p;
+
+  // Until we reach either end of either L or M, pick larger among
+  // elements L and M and place them in the correct position at A[p..r]
+  while (i < n1 && j < n2) {
+    if (low[i].key <= high[j].key) {
+      array[k] = low[i];
       i++;
-
-      // swap element at i with element at j
-        swap(&array[i], &array[j]);
+    } else {
+      array[k] = high[j];
+      j++;
     }
+    k++;
   }
 
-  // swap the pivot element with the greater element at i
-    swap(&array[i + 1], &array[high]);
+  // When we run out of elements in either L or M,
+  // pick up the remaining elements and put in A[p..r]
+  while (i < n1) {
+    array[k] = low[i];
+    i++;
+    k++;
+  }
 
-  // return the partition point
-  return (i + 1);
+  while (j < n2) {
+    array[k] = high[j];
+    j++;
+    k++;
+  }
 }
 
-void quickSort(struct fline *array, int low, int high) {
-  if (low < high) {
+// Divide the array into two subarrays, sort them and merge them
+void mergeSort(struct fline *array, int l, int r) {
+  if (l < r) {
 
-    // find the pivot element such that
-    // elements smaller than pivot are on left of pivot
-    // elements greater than pivot are on right of pivot
-    int pi = partition(array, low, high);
+    // m is the point where the array is divided into two subarrays
+    int m = l + (r - l) / 2;
 
-    // recursive call on the left of pivot
-    quickSort(array, low, pi - 1);
+    mergeSort(array, l, m);
+    mergeSort(array, m + 1, r);
 
-    // recursive call on the right of pivot
-    quickSort(array, pi + 1, high);
+    // Merge the sorted subarrays
+    merge(array, l, m, r);
   }
 }
 
 void *quickSortThread(void *args){
   myargs_t *qsArgs = (myargs_t *) args;
-  quickSort(qsArgs->a, qsArgs->b, qsArgs->c);
+  //quickSort(qsArgs->a, qsArgs->b, qsArgs->c);
+    mergeSort(qsArgs->a, qsArgs->b, qsArgs->c);
   void* a = NULL;
   return a;
 }
@@ -100,12 +165,12 @@ int num_cpu = get_nprocs(); //gets number of cpus availible
 char* file_start = mmap(NULL, fsize, PROT_READ, MAP_SHARED, fcode, 0); //https://linuxhint.com/using_mmap_function_linux/#:~:text=The%20mmap()%20function%20is,an%20array%20in%20the%20program.
 
 if (fcode < 0) { //no file, fail
-  fprintf(stderr, "An error has occured\n");
+  fprintf(stderr, "An error has occurred\n");
   exit(0);
 }
 
 if (fsize == 0) { //empty file, fail
-  fprintf(stderr, "An error has occured\n");
+  fprintf(stderr, "An error has occurred\n");
   exit(0);
 }
 
@@ -127,19 +192,22 @@ struct fline* line_arr = malloc(num_lines * sizeof(struct fline));
 
 for (int i = 0; i < num_lines; i++) {
 
-    char key[5]; 
-    for(int j = 0; j < 4; j++){
-        key[j] = *(file_start + j + i*100);
-
-    }
-    key[4] = '\0';
+    char key[4]; 
+    // for(int j = 0; j < 4; j++){
+    //     key[j] = *(file_start + j + i*100);
+    // }
+    memcpy(key, file_start + i * 100, 4);
+    line_arr[i].key = *(int *)key;
     
-    int32_t myInt1 = key[3] + (key[2] << 8) + (key[1] << 16) + (key[0] << 24);
+    // int32_t myInt1 = key[3] + (key[2] << 8) + (key[1] << 16) + (key[0] << 24);
 
-    line_arr[i].key = myInt1;
+    // line_arr[i].key = myInt1;
     //printf("Key %d : %d\n", i, line_arr[i].key);
 
-  line_arr[i].bytes = (file_start + i*100); //correct or not????
+    memcpy(line_arr[i].bytes, file_start + i * 100 + 4, 96);
+    // line_arr[i].key = *(int *)tempkey;
+
+  //line_arr[i].bytes = (file_start + i*100); //correct or not????
 }
 //using one thread
 // pthread_t thread;
@@ -170,12 +238,13 @@ if(num_lines / num_cpu > 1){
 
 }
 
-quickSort(line_arr, 0, num_lines - 1);
+//quickSort(line_arr, 0, num_lines - 1);
+mergeSort(line_arr, 0, num_lines - 1);
 
 
 ///////////////////////////////////// Write-Out
 
-int fptr2 = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+int fptr2 = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0666);
 
 if(fptr2 == -1){
     perror("open");
@@ -184,6 +253,7 @@ if(fptr2 == -1){
 
 
 // char nl = '\0';
+/*
 for(int i = 0; i < num_lines; i++) {
 
     // char key[4]; 
@@ -202,6 +272,14 @@ for(int i = 0; i < num_lines; i++) {
       exit(0);
     }
 }
+*/
+
+// for (int i = 0; i < num_lines; i++) {
+//       printf("Key %d : %d\n", i, line_arr[i].key);
+// }
+
+int rc = write(fptr2, line_arr, sizeof(struct fline) * num_lines);
+line_arr[0].key = rc;
 
 fsync(fptr2);
 
